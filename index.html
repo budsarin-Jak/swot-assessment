@@ -41,7 +41,6 @@
             font-size: 18px;
             font-weight: bold;
         }
-        /* จัด Layout ตัวเลือกสถานะให้เป็น 2 คอลัมน์ */
         .status-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -91,6 +90,26 @@
             transform: scale(1.5);
             cursor: pointer;
         }
+        
+        /* สไตล์สำหรับกล่องข้อความตอนที่ 3 */
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-family: 'Sarabun', Tahoma, sans-serif;
+            font-size: 15px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        .question-text {
+            font-weight: bold;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            color: #2980b9;
+        }
+
         .submit-btn {
             display: block;
             width: 100%;
@@ -102,7 +121,7 @@
             border-radius: 5px;
             cursor: pointer;
             transition: 0.3s;
-            margin-top: 20px;
+            margin-top: 30px;
         }
         .submit-btn:hover {
             background-color: #219150;
@@ -151,6 +170,20 @@
 
         <div class="part-title">ตอนที่ 2: แบบประเมินสภาพแวดล้อมภายในและภายนอก</div>
         <div id="evaluationArea"></div>
+
+        <div class="part-title">ตอนที่ 3: ข้อเสนอแนะเพิ่มเติม</div>
+        <p style="margin-left: 10px;"><b>คำชี้แจง:</b> กรุณาแสดงความคิดเห็นตามประเด็นคำถาม ต่อไปนี้</p>
+        
+        <div style="padding: 0 10px;">
+            <div class="question-text">3.1 ท่านคิดว่าโครงการ หรือ กิจกรรม หรือ ปัจจัยใดที่สามารถส่งเสริมให้เกิดความผูกพันระหว่างนักเรียน ครูและบุคลากรทางการศึกษากับโรงเรียนองค์การบริหารส่วนจังหวัดเพชรบูรณ์ (วังชมภูวิทยาคม) (สามารถเสนอแนะเพิ่มเติมได้มากกว่า 1 ข้อ)</div>
+            <textarea name="suggestion_1" rows="4" placeholder="พิมพ์ข้อเสนอแนะของท่านที่นี่..."></textarea>
+
+            <div class="question-text">3.2 ความคาดหวังต่อโรงเรียนหรือความสำเร็จที่ท่านต้องการให้เกิดขึ้นกับโรงเรียนองค์การบริหารส่วนจังหวัดเพชรบูรณ์ (วังชมภูวิทยาคม) (สามารถเสนอแนะเพิ่มเติมได้มากกว่า 1 ข้อ)</div>
+            <textarea name="suggestion_2" rows="4" placeholder="พิมพ์ข้อเสนอแนะของท่านที่นี่..."></textarea>
+
+            <div class="question-text">3.3 ข้อเสนอแนะอื่น ๆ (ถ้ามี)</div>
+            <textarea name="suggestion_3" rows="4" placeholder="พิมพ์ข้อเสนอแนะของท่านที่นี่..."></textarea>
+        </div>
 
         <button type="button" class="submit-btn" onclick="submitForm()">ส่งแบบประเมิน</button>
     </form>
@@ -347,31 +380,35 @@
     async function submitForm() {
         const form = document.getElementById('swotForm');
         
-        // ตรวจสอบว่ากรอกข้อมูลครบหรือไม่ (ทั้งสถานะผู้ตอบ และคะแนน)
+        // ตรวจสอบความถูกต้องของการกรอกข้อมูล
         if (!form.checkValidity()) {
-            alert('กรุณาเลือกสถานะผู้ตอบแบบสอบถาม และประเมินให้ครบทุกข้อครับ!');
+            alert('กรุณาเลือกสถานะผู้ตอบแบบสอบถาม และประเมินตอนที่ 2 ให้ครบทุกข้อครับ!');
             return;
         }
 
         const formData = new FormData(form);
-        const respondentStatus = formData.get('respondent_status'); // ดึงสถานะผู้ตอบ
+        const respondentStatus = formData.get('respondent_status'); 
+        
+        // ดึงข้อความจากตอนที่ 3 มาเก็บไว้ในตัวแปร
+        const suggestion1 = formData.get('suggestion_1');
+        const suggestion2 = formData.get('suggestion_2');
+        const suggestion3 = formData.get('suggestion_3');
         
         let answers = [];
         for (let [name, value] of formData.entries()) {
-            if (name !== 'respondent_status') {
+            // ไม่เอาสถานะ และไม่เอาข้อความข้อเสนอแนะ มารวมในส่วนของคะแนน
+            if (name !== 'respondent_status' && !name.startsWith('suggestion')) {
                 answers.push({ id: name, score: parseInt(value) });
             }
         }
 
-        // จับข้อมูลรวมกันเป็น Package เดียวเพื่อส่งไปที่ Google Sheet
+        // จัดกลุ่มข้อมูลใหม่ก่อนส่งไป Google Sheet
         const payload = {
             status: respondentStatus,
-            answers: answers
+            answers: answers,
+            suggestions: [suggestion1, suggestion2, suggestion3] // เพิ่มข้อเสนอแนะเข้าไปตรงนี้
         };
 
-        // ========================================================
-        // 🚨 นำ URL ของเว็บแอปที่ก็อปปี้ไว้ มาวางตรงนี้เหมือนเดิมเลยครับ
-        // ========================================================
         const scriptURL = 'https://script.google.com/macros/s/AKfycbyp3jngebOc4NbdM-U-d6mgbqjERvSTlnBZtyVuRrcaNNtjHBC_2zgszb0DP45Ayp9w/exec'; 
 
         const btn = document.querySelector('.submit-btn');
@@ -384,12 +421,12 @@
             const response = await fetch(scriptURL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
-                body: JSON.stringify(payload) // ส่ง payload รูปแบบใหม่ไป
+                body: JSON.stringify(payload) 
             });
 
-            alert('ขอบคุณครับ! ระบบได้บันทึกข้อมูลการประเมินเรียบร้อยแล้ว');
+            alert('ขอบคุณครับ! ระบบได้บันทึกข้อมูลและข้อเสนอแนะเรียบร้อยแล้ว');
             form.reset(); 
-            window.scrollTo(0, 0); // เลื่อนกลับไปด้านบนสุดเพื่อรับคนต่อไป
+            window.scrollTo(0, 0); 
             
         } catch (error) {
             alert('เกิดข้อผิดพลาดในการส่งข้อมูล: ' + error.message);
